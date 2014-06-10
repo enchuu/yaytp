@@ -13,6 +13,7 @@ class Ui():
     """The main Ui."""
 
     def __init__(self):
+        self.save_session = True
         self.max_results = 20
         self.info_width = 21
         self.title_color = curses.COLOR_GREEN
@@ -287,11 +288,14 @@ class Ui():
 if (__name__ == '__main__'):
     try:
         ui = Ui()
-        if (os.path.isfile('session')):
-            ui.pages, ui.page_index = pickle.load(open('session', 'rb'))
+        if (ui.save_session):
+            if (os.path.isfile('session')):
+                ui.pages, ui.page_index = pickle.load(open('session', 'rb'))
+            else:
+                open('session', 'a').close()
+            ui.run_ui()
+            pickle.dump((ui.pages, ui.page_index), open('session', 'wb'))
         else:
-            open('session', 'a').close()
-        ui.run_ui()
-        pickle.dump((ui.pages, ui.page_index), open('session', 'wb'))
+            ui.run_ui()
     finally:
         curses.endwin()

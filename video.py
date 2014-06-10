@@ -51,7 +51,3 @@ class Video():
         player = subprocess.Popen([player] + args.split(' ') +  [url], stderr=subprocess.DEVNULL)
         player.wait()
 
-
-
-
-
