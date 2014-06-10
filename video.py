@@ -33,20 +33,22 @@ class Video():
         """Formats other information about the video."""
         
 
-        string = ' ' + quick_fit_string(self.user, 21) + '\n' + \
-                 ' v:' + format_int(self.views, 4) + \
-                 ' time:' + quick_fit_string(format_time(self.length), 8) + '\n' + \
-                 ' l:' + format_int(self.likes, 4) + \
-                 ' d:' + format_int(self.dislikes, 4) + \
-                 ' r:' + quick_fit_string(str(self.rating), 4)
-        return string
+        user = ' ' + quick_fit_string(self.user, 21)
+        info1 = ' v:' + format_int(self.views, 4) + \
+                ' t:' + quick_fit_string(format_time(self.length), 8)
+        info2 = ' l:' + format_int(self.likes, 4) + \
+                ' d:' + format_int(self.dislikes, 4) + \
+                ' r:' + quick_fit_string(str(self.rating), 4)
+        info3 = ' r:' + quick_fit_string(str(self.rating), 4) + \
+                ' u:' + time.strftime('%d/%m/%y', self.uploaded)
+        return (user, info1, info3)
 
 
     def play(self, player, args):
         """Opens the video in a video player"""
 
         url = 'https://www.youtube.com/watch?v=' + self.id
-        player = subprocess.Popen([player, args, url], stdout = subprocess.PIPE, stderr = subprocess.PIPE)
+        player = subprocess.Popen([player] + args.split(' ') +  [url], stderr=subprocess.DEVNULL)
         player.wait()
 
 

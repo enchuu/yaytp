@@ -70,9 +70,11 @@ class Page():
 
   def swap(self, video, shift):
     index = self.videos.index(video)
-    if ((index == 0 and shift == -1) or (index == len - 1 and shift == 1)):
+    if ((index == 0 and shift < 0) or (index == len(self.videos) - 1 and shift > 0)):
       return
     else:
       self.videos[index + shift], self.videos[index] = self.videos[index], self.videos[index + shift]
    
-
+  def delete(self, video):
+    index = self.videos.index(video)
+    self.videos = self.videos[:index] + self.videos[index + 1:]
