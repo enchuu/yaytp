@@ -7,15 +7,15 @@ dependencies: mpv, python3
 
 usage: run ui.py with 'python3 ui.py' or './ui.py'
 
-there are 2 special pages: subscriptions and bookmarks \n
-subscriptions are like channel subscriptions, it displays a list of uploads by users added to the subscription list sorted by date uploaded \n
-bookmarks are a list of videos added from either the subscription list or search results \n
-everything else is a search page, you can search for terms or users \n
+there are 2 special pages: subscriptions and bookmarks
+subscriptions are like channel subscriptions, it displays a list of uploads by users added to the subscription list sorted by date uploaded
+bookmarks are a list of videos added from either the subscription list or search results
+everything else is a search page, you can search for terms or users
 
 
 customization options:
 there aren't really that many, if you want to change stuff you can look at the source code.
-must of the stuff is in __init__ of ui.py
+must of the stuff is in init of ui.py
 formatting stuff is in draw methods of ui.py
 make an issue request if you really want to change something and don't know how
 
@@ -40,4 +40,3 @@ fix hackish code
 dynamically change settings without editing source
 maybe add a download option? would require yt-dl
 maybe allow for custom locations/amounts of bookmarks/subscriptions pages?
-
