@@ -7,10 +7,10 @@ dependencies: mpv, python3
 
 usage: run ui.py with 'python3 ui.py' or './ui.py'
 
-there are 2 special pages: subscriptions and bookmarks
-subscriptions are like channel subscriptions, it displays a list of uploads by users added to the subscription list sorted by date uploaded
-bookmarks are a list of videos added from either the subscription list or search results
-everything else is a search page, you can search for terms or users
+there are 2 special pages: subscriptions and bookmarks \n
+subscriptions are like channel subscriptions, it displays a list of uploads by users added to the subscription list sorted by date uploaded \n
+bookmarks are a list of videos added from either the subscription list or search results \n
+everything else is a search page, you can search for terms or users \n
 
 
 customization options:
