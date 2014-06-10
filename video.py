@@ -2,6 +2,8 @@
 
 import subprocess
 import time
+import json
+import urllib.request
 from format import *
 
 class Video():

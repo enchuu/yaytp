@@ -62,8 +62,8 @@ class Ui():
 
         h, w = self.screen.getmaxyx()
         info_pane_start = w - self.info_width
-        self.main_pane = curses.newwin(h-2, info_pane_start, 0, 0)
-        self.info_pane = curses.newwin(h-2, self.info_width, 0, info_pane_start)
+        self.main_pane = curses.newwin(h + 5, info_pane_start, 0, 0)
+        self.info_pane = curses.newwin(h, self.info_width, 0, info_pane_start)
         self.page_bar = curses.newwin(1, w + 2, h - 2, 0)
         self.status_bar = curses.newwin(1, w + 2, h - 1, 0)
         self.draw_main_pane()
@@ -76,11 +76,11 @@ class Ui():
         
         if (self.next_message == ''):
             h, w = self.main_pane.getmaxyx()
-            videos_per_page = h // 3
+            videos_per_page = (h - 5) // 3
             page = self.pages[self.page_index]
             start = page.start
-            end = min(len(page.videos) - 1, start + videos_per_page)
-            status = 'displaying videos ' + str(start) + '-' + str(end) + ' of '
+            end = min(len(page.videos), start + videos_per_page)
+            status = 'displaying videos ' + str(start + 1) + '-' + str(end) + ' of '
             if (page.type == 'search result'):
                 if (not page.videos and not hasattr(page, 'user')):
                     status = 'new page'
@@ -109,7 +109,7 @@ class Ui():
         page = self.pages[self.page_index]
         start = page.start
         h, w = pane.getmaxyx()
-        videos_per_page = h // 3
+        videos_per_page = (h - 5) // 3
         end = min(len(page.videos), start + videos_per_page)
         y = 0
         for video in page.videos[start:end]:
@@ -183,7 +183,7 @@ class Ui():
             index = 1
         new_page = Page('search result')
         self.pages = pages[0:index + 1] + [new_page] + pages[index + 1:]
-        self.page_index += 1
+        self.page_index = max(self.page_index + 1, 2)
 
 
     def loop(self):
@@ -194,16 +194,16 @@ class Ui():
             index = self.page_index
             page = pages[index]
             h, w = self.main_pane.getmaxyx()
-            videos_per_page = h // 3
+            videos_per_page = (h - 5) // 3
             c = self.status_bar.getch()
             if (c == ord('q')):
                 break
             elif (c == ord('j')):
-                new_start = page.start + videos_per_page
+                new_start = page.start + min(videos_per_page, (h - 7) // 3)
                 if (new_start < len(page.videos)):
                     page.start = new_start
             elif (c == ord('k')):
-                new_start = page.start - videos_per_page
+                new_start = page.start - min(videos_per_page, (h - 7) // 3)
                 if (new_start > 0):
                     page.start = new_start
                 else:
@@ -223,7 +223,7 @@ class Ui():
                 if (page.type == 'subscriptions'):
                     page.refresh_subs(self.max_results)
             elif (c == ord('/') or c == ord('.') or c == ord(' ')):
-                if (index < 2 and not (self.open_searches_in_new_page and index > 0)):
+                if (index < 2 and not self.open_searches_in_new_page):
                     continue
                 if (self.open_searches_in_new_page):
                     self.open_new_page()
@@ -231,7 +231,7 @@ class Ui():
                 s = self.get_input("search: ")
                 self.pages[self.page_index].add_search('', s, self.search_order, self.max_results)
             elif (c == ord('u')):
-                if (index < 2 and not (self.open_searches_in_new_page and index > 0)):
+                if (index < 2 and not self.open_searches_in_new_page):
                     continue
                 if (self.open_searches_in_new_page):
                     self.open_new_page()
