@@ -23,14 +23,16 @@ class Ui():
         self.user_order = 'published'
         self.search_order = 'relevance'
         self.open_searches_in_new_page = True
+        self.show_real_index = True
+        self.simple_video_format = True
         self.player = 'mpv'
         self.player_args = '--no-terminal'
         self.pages = []
         self.next_message = ''
-        self.pages.append(Page('subscriptions'))
-        self.pages.append(Page('bookmarks'))
+        self.pages.append(SubscriptionPage('subscriptions'))
+        self.pages.append(BookmarkPage('bookmarks'))
         if (not self.open_searches_in_new_page):
-            self.pages.append(Page('search result'))
+            self.pages.append(SearchPage('search result'))
             self.page_index = 2
         else:
             self.page_index = 1
@@ -61,25 +63,26 @@ class Ui():
         """Redraws the entire screen."""
 
         h, w = self.screen.getmaxyx()
-        info_pane_start = w - self.info_width
-        self.main_pane = curses.newwin(h + 5, info_pane_start, 0, 0)
-        self.info_pane = curses.newwin(h, self.info_width, 0, info_pane_start)
         self.page_bar = curses.newwin(1, w + 2, h - 2, 0)
-        self.status_bar = curses.newwin(1, w + 2, h - 1, 0)
-        self.draw_main_pane()
+        self.status_bar = curses.newwin(2, w + 2, h - 1, 0)
+        self.draw_main_window()
         self.draw_page_bar()
         self.draw_status_bar()
         
+
+    def draw_main_window(self):
+        """Redraws the main window."""
+        self.pages[self.page_index].draw_main_pane(self.screen, self)
+
 
     def draw_status_bar(self):
         """Redraws the status bar."""
         
         if (self.next_message == ''):
-            h, w = self.main_pane.getmaxyx()
-            videos_per_page = (h - 5) // 3
+            h, w = self.screen.getmaxyx()
             page = self.pages[self.page_index]
             start = page.start
-            end = min(len(page.videos), start + videos_per_page)
+            end = page.end
             status = 'displaying videos ' + str(start + 1) + '-' + str(end) + ' of '
             if (page.type == 'search result'):
                 if (not page.videos and not hasattr(page, 'user')):
@@ -101,32 +104,6 @@ class Ui():
         self.status_bar.refresh()
 
     
-    def draw_main_pane(self):
-        """Redraws the main pane."""
-
-        pane = self.main_pane
-        info_pane = self.info_pane
-        page = self.pages[self.page_index]
-        start = page.start
-        h, w = pane.getmaxyx()
-        videos_per_page = (h - 5) // 3
-        end = min(len(page.videos), start + videos_per_page)
-        y = 0
-        for video in page.videos[start:end]:
-            title, desc = video.format_title_desc(y // 3)
-            user, info1, info2 = video.format_info()
-            pane.addstr(y, 0, title, self.title_style)
-            info_pane.addstr(y, 0, user, self.title_style)
-            y += 1
-            pane.addstr(y, 0, desc)
-            info_pane.addstr(y, 0, info1)
-            y += 1
-            info_pane.addstr(y, 0, info2)
-            y += 1
-        pane.refresh()
-        info_pane.refresh()
-
-
     def draw_page_bar(self):
         """Redraws the page bar."""
 
@@ -168,115 +145,157 @@ class Ui():
         self.status_bar.addstr(0, 0, prompt)
         curses.curs_set(1)
         self.status_bar.refresh()
-        s = self.status_bar.getstr(0, len(prompt)).decode('utf-8')
+        try:
+            s = self.status_bar.getstr(0, len(prompt)).decode('utf-8')
+        except KeyboardInterrupt:
+            s = ''
         curses.noecho()
         curses.curs_set(0)
         return s
 
     
     def open_new_page(self):
-        """Opens a new page after the current page and goes to it."""
-
         pages = self.pages
         index = self.page_index
         if (index < 1):
             index = 1
-        new_page = Page('search result')
+        new_page = SearchPage('search result')
         self.pages = pages[0:index + 1] + [new_page] + pages[index + 1:]
         self.page_index = max(self.page_index + 1, 2)
+    
+    def page_down(self):
+        page = self.pages[self.page_index]
+        new_start = page.end - 1
+        if (new_start < len(page.videos)):
+            page.start = new_start
+
+    def page_up(self):
+        page = self.pages[self.page_index]
+        new_start = page.start * 2 - page.end + 1
+        if (new_start > 0):
+            page.start = new_start
+        else:
+            page.start = 0
+
+    def close_page(self):
+        index = self.page_index
+        pages = self.pages
+        if (index > 1):
+            self.pages = pages[0:index] + pages[index + 1:]
+            if (self.page_index >= len(self.pages)):
+                    self.page_index -= 1
+
+    def page_left(self):
+        self.page_index = max(0, self.page_index - 1)
+
+    def page_right(self):
+        pages = self.pages
+        self.page_index = min(len(pages) - 1, self.page_index + 1)
+
+    def refresh_subs(self):
+        page = self.pages[self.page_index]
+        if (page.type == 'subscriptions'):
+            page.refresh_subs(self.max_results)
+
+    def do_search(self, user = False):
+        index = self.page_index
+        if (index < 2 and not self.open_searches_in_new_page):
+            return
+        prompt = 'search: ' if not user else 'search user: '
+        s = self.get_input(prompt)
+        if (self.open_searches_in_new_page):
+            self.open_new_page()
+        if (s == ''):
+            return
+        if (user):
+            user, term = (s.split('/')[0], s.split('/')[1]) if '/' in s else (s, '')
+            self.pages[self.page_index].add_search(user, term, self.user_order, self.max_results)
+        else:
+            self.pages[self.page_index].add_search('', s, self.search_order, self.max_results)
+
+    def add_user(self):
+        index = self.page_index
+        page = self.pages[index]
+        if (index == 0):
+            s = self.get_input("add user: ")
+            if (s == ''):
+                return
+            videos = search_user(s, '', self.user_order, self.max_results)
+            if (videos):
+                page.add_user(s)
+                self.next_message = 'user ' + s + ' added to subscriptions'
+            else:
+                self.next_message = 'no results found for user ' + s
+        elif (index == 1):
+            return
+        else:
+            if (not hasattr(page, 'user') or page.user == ''):
+                self.next_message = 'cannot add to subscriptions: not a user search page'
+            else:
+                s = page.user
+                if (page.videos):
+                    self.pages[0].add_user(s)
+                    self.next_message = 'user ' + s + ' added to subscriptions'
+                else:
+                    self.next_message = 'no results found for user ' + s
 
 
     def loop(self):
-        """The main loop of the UI. So much spaghetti code. I will try to fix this eventually"""
+        """The main loop of the UI."""
     
         while True:
             pages = self.pages
             index = self.page_index
             page = pages[index]
-            h, w = self.main_pane.getmaxyx()
-            videos_per_page = (h - 5) // 3
+            start = page.start
+            end = page.end
             c = self.status_bar.getch()
             if (c == ord('q')):
                 break
             elif (c == ord('j')):
-                new_start = page.start + min(videos_per_page, (h - 7) // 3)
-                if (new_start < len(page.videos)):
-                    page.start = new_start
+                self.page_down()
             elif (c == ord('k')):
-                new_start = page.start - min(videos_per_page, (h - 7) // 3)
-                if (new_start > 0):
-                    page.start = new_start
-                else:
-                    page.start = 0
+                self.page_up()
             elif (c == ord('w')):
-                if (index > 1):
-                    self.pages = pages[0:index] + pages[index + 1:]
-                    if (self.page_index >= len(self.pages)):
-                            self.page_index -= 1
+                self.close_page()
             elif (c == ord('n')):
                 self.open_new_page()
             elif (c == ord('h')):
-                self.page_index = max(0, self.page_index - 1)
+                self.page_left()
             elif (c == ord('l')):
-                self.page_index = min(len(pages) - 1, self.page_index + 1)
+                self.page_right()
             elif (c == ord('r')):
-                if (page.type == 'subscriptions'):
-                    page.refresh_subs(self.max_results)
+                self.refresh_subs()
             elif (c == ord('/') or c == ord('.') or c == ord(' ')):
-                if (index < 2 and not self.open_searches_in_new_page):
-                    continue
-                if (self.open_searches_in_new_page):
-                    self.open_new_page()
-                    self.draw_screen()
-                s = self.get_input("search: ")
-                self.pages[self.page_index].add_search('', s, self.search_order, self.max_results)
+                self.do_search()
             elif (c == ord('u')):
-                if (index < 2 and not self.open_searches_in_new_page):
-                    continue
-                if (self.open_searches_in_new_page):
-                    self.open_new_page()
-                    self.draw_screen()
-                s = self.get_input("search user: ")
-                user, term = (s.split('/')[0], s.split('/')[1]) if '/' in s else (s, '')
-                self.pages[self.page_index].add_search(user, term, self.user_order, self.max_results)
+                self.do_search(user = True)
             elif (c == ord('s')):
-                if (index == 0):
-                    s = self.get_input("add user: ")
-                    videos = search_user(s, '', self.user_order, self.max_results)
-                    if (videos):
-                        page.add_user(s)
-                        self.next_message = 'user ' + s + ' added to subscriptions'
-                    else:
-                        self.next_message = 'no results found for user ' + s
-                elif (index == 1):
-                    continue
-                else:
-                    if (not hasattr(page, 'user') or page.user == ''):
-                        self.next_message = 'cannot add to subscriptions: not a user search page'
-                    else:
-                        s = page.user
-                        if (page.videos):
-                            self.pages[0].add_user(s)
-                            self.next_message = 'user ' + s + ' added to subscriptions'
-                        else:
-                            self.next_message = 'no results found for user ' + s
+                self.add_user()
             elif (c >= ord('0') and c <= ord('9')):
-                video_index = page.start + c - ord('0')
+                input = chr(c)
+                while True:
+                    n = self.status_bar.getch()
+                    input += chr(n)
+                    if (n < ord('0') or n > ord('9')):
+                        break
+                num = int(input[:-1])
+                command = input[-1:]
+                video_index = num - 1 if self.show_real_index else num + page.start
                 if (video_index >= len(page.videos)):
                     self.next_message = 'selection index out of range'
                     continue
-                n = self.status_bar.getch()
                 video = page.videos[video_index]
-                if (n == ord('p') or n == 13):
+                if (command == 'p'):
                     self.status_bar.clear()
                     self.status_bar.addstr(0, 0, 'playing: ' + video.title)
                     self.status_bar.refresh()
                     video.play(self.player, self.player_args)
-                elif (n == ord('b')):
+                elif (command == ord('b')):
                     self.pages[1].add_bookmark(video)
                     self.next_message = '"' + video.title + '" added to bookmarks'
                 elif (page.type == 'bookmarks'):
-                    if (n == ord('k')):
+                    if (command == ord('k')):
                         page.swap(video, -1)
                     elif (n == ord('j')):
                         page.swap(video, 1)

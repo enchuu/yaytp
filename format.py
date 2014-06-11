@@ -82,3 +82,17 @@ def format_time(secs):
         i += 1
     return hms[i:]
 
+
+def center(items, width):
+    """Centers a list of items putting an equal amount of spacing between each item."""
+
+    cur_width = 0
+    for item in items:
+        cur_width += len(item)
+    spacing = (width - cur_width) // (len(items) - 1)
+    line = ''
+    for item in items:
+        line += item + ' ' * spacing
+    line = line[0:len(line) - spacing]
+    line = ' ' * ((width - len(line)) // 2) + line
+    return line
