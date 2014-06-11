@@ -49,5 +49,4 @@ class Video():
 
         url = 'https://www.youtube.com/watch?v=' + self.id
         player = subprocess.Popen([player] + args.split(' ') +  [url], stderr=subprocess.DEVNULL)
-        player.wait()
 

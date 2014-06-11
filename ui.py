@@ -26,7 +26,7 @@ class Ui():
         self.show_real_index = True
         self.simple_video_format = True
         self.player = 'mpv'
-        self.player_args = '--no-terminal'
+        self.player_args = '--no-terminal --volume=20'
         self.pages = []
         self.next_message = ''
         self.pages.append(SubscriptionPage('subscriptions'))
@@ -203,10 +203,10 @@ class Ui():
             return
         prompt = 'search: ' if not user else 'search user: '
         s = self.get_input(prompt)
-        if (self.open_searches_in_new_page):
-            self.open_new_page()
         if (s == ''):
             return
+        if (self.open_searches_in_new_page):
+            self.open_new_page()
         if (user):
             user, term = (s.split('/')[0], s.split('/')[1]) if '/' in s else (s, '')
             self.pages[self.page_index].add_search(user, term, self.user_order, self.max_results)
@@ -288,18 +288,17 @@ class Ui():
                 video = page.videos[video_index]
                 if (command == 'p'):
                     self.status_bar.clear()
-                    self.status_bar.addstr(0, 0, 'playing: ' + video.title)
-                    self.status_bar.refresh()
+                    self.next_message = 'playing: ' + video.title
                     video.play(self.player, self.player_args)
-                elif (command == ord('b')):
+                elif (command == 'b'):
                     self.pages[1].add_bookmark(video)
                     self.next_message = '"' + video.title + '" added to bookmarks'
                 elif (page.type == 'bookmarks'):
-                    if (command == ord('k')):
+                    if (command == 'k'):
                         page.swap(video, -1)
-                    elif (n == ord('j')):
+                    elif (command == 'j'):
                         page.swap(video, 1)
-                    elif (n == ord('d')):
+                    elif (command == 'd'):
                         page.delete(video) 
             self.draw_screen()
 
