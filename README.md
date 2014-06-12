@@ -14,10 +14,7 @@ everything else is a search page, you can search for terms or users
 
 
 customization options:  
-there aren't really that many, if you want to change stuff you can look at the source code.  
-must of the stuff is in init of ui.py  
-formatting stuff is in draw methods of ui.py  
-make an issue request if you really want to change something and don't know how  
+settings can be changed by editing the Settings class in ui.py, or on the fly by typing s in the prompt
 
 
 keybinds:  
@@ -30,13 +27,8 @@ play a video:[number]p
 add a video to bookmarks:[number]b  
 deleting a a video in the bookmarks page:[number]d  
 moving up/down a video in the bookmarks page:[number]:k/j  
-add a user to subscriptions:s  
+add a user to subscriptions:s 
+filter a current page for a term:f, then the term
+change a setting:c, then [setting]=[value], no spaces between the '='
 quit:q  
 
-
-todo:  
-organize page class better  
-fix hackish code  
-dynamically change settings without editing source  
-maybe add a download option? would require yt-dl  
-maybe allow for custom locations/amounts of bookmarks/subscriptions pages?  

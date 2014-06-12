@@ -19,7 +19,10 @@ class Page():
         if (self.type == 'bookmarks' or self.type == 'subscriptions'):
             return self.type
         elif (not hasattr(self, 'user')):
-            return 'new search'
+            if (hasattr(self, 'term')):
+                return 'f:' + self.term
+            else:
+                return 'new search'
         elif (self.user == ''):
             return 's:' + self.term
         else:

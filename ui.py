@@ -9,14 +9,14 @@ from page import *
 from query import *
 from video import *
 
-class Ui():
-    """The main Ui."""
+class Settings():
+    """Class to hold settings."""
 
-    def __init__(self):
-        self.save_session = True
+    def __init__(self):    
         self.max_results = 20
         self.info_width = 21
         self.title_color = curses.COLOR_GREEN
+        self.save_session = True
         self.bold_title = True
         self.current_page_color = curses.COLOR_GREEN
         self.bold_current_page = True
@@ -27,11 +27,19 @@ class Ui():
         self.simple_video_format = True
         self.player = 'mpv'
         self.player_args = '--no-terminal --volume=20'
+
+
+class Ui():
+    """The main Ui."""
+
+    def __init__(self):
+        self.settings = Settings()
+        self.save_session = True
         self.pages = []
         self.next_message = ''
         self.pages.append(SubscriptionPage('subscriptions'))
         self.pages.append(BookmarkPage('bookmarks'))
-        if (not self.open_searches_in_new_page):
+        if (not self.settings.open_searches_in_new_page):
             self.pages.append(SearchPage('search result'))
             self.page_index = 2
         else:
@@ -47,14 +55,14 @@ class Ui():
         curses.curs_set(0)
         curses.start_color()
         curses.use_default_colors()
-        curses.init_pair(1, self.title_color, -1)
-        curses.init_pair(2, self.current_page_color, -1)
-        self.title_style = curses.color_pair(1)
-        if (self.bold_title):
-            self.title_style = self.title_style ^ curses.A_BOLD
-        self.current_page_style = curses.color_pair(2)
-        if (self.bold_current_page):
-                self.current_page_style = self.current_page_style ^ curses.A_BOLD
+        curses.init_pair(1, self.settings.title_color, -1)
+        curses.init_pair(2, self.settings.current_page_color, -1)
+        self.settings.title_style = curses.color_pair(1)
+        if (self.settings.bold_title):
+            self.settings.title_style = self.settings.title_style ^ curses.A_BOLD
+        self.settings.current_page_style = curses.color_pair(2)
+        if (self.settings.bold_current_page):
+                self.settings.current_page_style = self.settings.current_page_style ^ curses.A_BOLD
         self.draw_screen()
         self.loop()
 
@@ -72,7 +80,7 @@ class Ui():
 
     def draw_main_window(self):
         """Redraws the main window."""
-        self.pages[self.page_index].draw_main_pane(self.screen, self)
+        self.pages[self.page_index].draw_main_pane(self.screen, self.settings)
 
 
     def draw_status_bar(self):
@@ -89,6 +97,8 @@ class Ui():
                     status = 'new page'
                 elif (not page.videos):
                     status = 'no results found for ' + (page.term if page.user == '' else page.user + '/' + page.term)
+                elif (not hasattr(page, 'user')):
+                    status += 'results filtered by \'' + page.term + '\''
                 elif (page.user == ''):
                     status += 'results for "' + page.term + '" ordered by ' + page.ordering
                 else:
@@ -132,7 +142,7 @@ class Ui():
         if (real_width < w - 1):
             right += '-'
         panel.addstr(0, 0, left)
-        panel.addstr(current_page, self.current_page_style)
+        panel.addstr(current_page, self.settings.current_page_style)
         panel.addstr(right)
         panel.refresh()
 
@@ -152,8 +162,21 @@ class Ui():
         curses.noecho()
         curses.curs_set(0)
         return s
-
     
+    def change_settings(self):
+        s = self.get_input('set: ')
+        attr, val = s.split('=')
+        if (not hasattr(self.settings, attr)):
+            self.next_message = attr + ' is not a valid option.'
+            return
+        else:
+            try:
+                value = eval(val)
+            except NameError:
+                value = val
+            setattr(self.settings, attr, value)
+            self.next_message = attr + ' set to ' + str(value)
+
     def open_new_page(self):
         pages = self.pages
         index = self.page_index
@@ -163,6 +186,14 @@ class Ui():
         self.pages = pages[0:index + 1] + [new_page] + pages[index + 1:]
         self.page_index = max(self.page_index + 1, 2)
     
+    def filter_videos(self):
+        videos = self.pages[self.page_index].videos
+        self.open_new_page()
+        page = self.pages[self.page_index]
+        term = self.get_input('filter term: ')
+        page.videos = list(filter(lambda video: term.lower() in video.title.lower() or term in video.description.lower() or term in video.user.lower(), videos))
+        page.term = term
+
     def page_down(self):
         page = self.pages[self.page_index]
         new_start = page.end - 1
@@ -195,23 +226,23 @@ class Ui():
     def refresh_subs(self):
         page = self.pages[self.page_index]
         if (page.type == 'subscriptions'):
-            page.refresh_subs(self.max_results)
+            page.refresh_subs(self.settings.max_results)
 
     def do_search(self, user = False):
         index = self.page_index
-        if (index < 2 and not self.open_searches_in_new_page):
+        if (index < 2 and not self.settings.open_searches_in_new_page):
             return
         prompt = 'search: ' if not user else 'search user: '
         s = self.get_input(prompt)
         if (s == ''):
             return
-        if (self.open_searches_in_new_page):
+        if (self.settings.open_searches_in_new_page):
             self.open_new_page()
         if (user):
             user, term = (s.split('/')[0], s.split('/')[1]) if '/' in s else (s, '')
-            self.pages[self.page_index].add_search(user, term, self.user_order, self.max_results)
+            self.pages[self.page_index].add_search(user, term, self.settings.user_order, self.settings.max_results)
         else:
-            self.pages[self.page_index].add_search('', s, self.search_order, self.max_results)
+            self.pages[self.page_index].add_search('', s, self.settings.search_order, self.settings.max_results)
 
     def add_user(self):
         index = self.page_index
@@ -220,7 +251,7 @@ class Ui():
             s = self.get_input("add user: ")
             if (s == ''):
                 return
-            videos = search_user(s, '', self.user_order, self.max_results)
+            videos = search_user(s, '', self.settings.user_order, self.settings.max_results)
             if (videos):
                 page.add_user(s)
                 self.next_message = 'user ' + s + ' added to subscriptions'
@@ -272,6 +303,10 @@ class Ui():
                 self.do_search(user = True)
             elif (c == ord('s')):
                 self.add_user()
+            elif (c == ord('f')):
+                self.filter_videos()
+            elif (c == ord('c')):
+                self.change_settings()
             elif (c >= ord('0') and c <= ord('9')):
                 input = chr(c)
                 while True:
@@ -281,7 +316,7 @@ class Ui():
                         break
                 num = int(input[:-1])
                 command = input[-1:]
-                video_index = num - 1 if self.show_real_index else num + page.start
+                video_index = num - 1 if self.settings.show_real_index else num + page.start
                 if (video_index >= len(page.videos)):
                     self.next_message = 'selection index out of range'
                     continue
@@ -289,7 +324,7 @@ class Ui():
                 if (command == 'p'):
                     self.status_bar.clear()
                     self.next_message = 'playing: ' + video.title
-                    video.play(self.player, self.player_args)
+                    video.play(self.settings.player, self.settings.player_args)
                 elif (command == 'b'):
                     self.pages[1].add_bookmark(video)
                     self.next_message = '"' + video.title + '" added to bookmarks'
@@ -308,11 +343,11 @@ if (__name__ == '__main__'):
         ui = Ui()
         if (ui.save_session):
             if (os.path.isfile('session')):
-                ui.pages, ui.page_index = pickle.load(open('session', 'rb'))
+                ui.pages, ui.page_index, ui.settings = pickle.load(open('session', 'rb'))
             else:
                 open('session', 'a').close()
             ui.run_ui()
-            pickle.dump((ui.pages, ui.page_index), open('session', 'wb'))
+            pickle.dump((ui.pages, ui.page_index, ui.settings), open('session', 'wb'))
         else:
             ui.run_ui()
     finally:
