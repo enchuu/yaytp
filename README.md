@@ -27,8 +27,8 @@ play a video:[number]p
 add a video to bookmarks:[number]b  
 deleting a a video in the bookmarks page:[number]d  
 moving up/down a video in the bookmarks page:[number]:k/j  
-add a user to subscriptions:s 
-filter a current page for a term:f, then the term
-change a setting:c, then [setting]=[value], no spaces between the '='
+add a user to subscriptions:s   
+filter a current page for a term:f, then the term  
+change a setting:c, then [setting]=[value], no spaces between the '='  
 quit:q  
 
